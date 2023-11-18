@@ -1,81 +1,61 @@
-from Bio.PDB import PDBParser
-import numpy as np
-from Bio import PDB
+from Bio.PDB import *
+import matplotlib.pyplot as plt
 
-def pobierz_strukture_z_pdb(pdb_id):
-    pdbl = PDB.PDBList()
-    pdb_file_path = pdbl.retrieve_pdb_file(pdb_id, pdir='.', file_format='pdb')
+# Ścieżka do pliku PDB
+pdb_file = "C:/Users/karol/PycharmProjects/Katy/1mbo.pdb"  # Zmień na właściwą ścieżkę
 
-    if pdb_file_path:
-        print(f'Pobrano strukturę o ID {pdb_id} i zapisano w pliku {pdb_file_path}')
-        return pdb_file_path
-    else:
-        print(f'Nie udało się pobrać struktury o ID {pdb_id}')
-        return None
+# Inicjalizacja parsera PDB
+parser = PDBParser()
 
+# Wczytanie struktury z pliku PDB
+structure = parser.get_structure("struktura", pdb_file)
 
-def calculate_dihedral_angle(atom1, atom2, atom3, atom4):
-    #Oblicza kąt dihedryczny alpha
-    if any(x is None for x in [atom1, atom2, atom3, atom4]):
-        return None
+# Lista kątów phi i psi
+phi_values = []
+psi_values = []
+structure_colors = []  # Lista przechowująca kolory dla poszczególnych struktur drugorzędowych
 
-    b1 = atom2 - atom1
-    b2 = atom3 - atom2
-    b3 = atom4 - atom3
+# Iteracja po łańcuchach i resztach w strukturze
+for model in structure:
+    for chain in model:
+        polypeptides = PPBuilder().build_peptides(chain)
+        for poly_index, poly in enumerate(polypeptides):
+            phi_psi = poly.get_phi_psi_list()
+            for phi, psi in phi_psi:
+                if phi is not None and psi is not None:
+                    # Konwersja kątów z radianów na stopnie
+                    phi_deg = phi * (180.0 / 3.14159)
+                    psi_deg = psi * (180.0 / 3.14159)
+                    phi_values.append(phi_deg)
+                    psi_values.append(psi_deg)
 
-    v1 = np.cross(b1, b2)
-    v1 = v1 / np.linalg.norm(v1)
+                    # Przypisanie koloru na podstawie kryteriów dla helisy alfa i arkusza beta
+                    if phi_deg < 0 and psi_deg < 0:
+                        structure_colors.append('blue')  # Helisa alfa - niebieski kolor
+                    elif phi_deg < 0 and psi_deg > 0:
+                        structure_colors.append('red')  # Arkusz beta - czerwony kolor
+                    else:
+                        structure_colors.append('green')  # Pozostałe - zielony kolor
 
-    v2 = np.cross(b2, b3)
-    v2 = v2 / np.linalg.norm(v2)
+# Stworzenie wykresu Ramachandrana z kolorami dla struktur drugorzędowych
+plt.figure(figsize=(8, 6))
+for color, phi, psi in zip(structure_colors, phi_values, psi_values):
+    plt.scatter(phi, psi, s=5, alpha=0.5, c=color)
 
-    m1 = np.cross(v1, v2)
-    m2 = np.cross(v1 / np.linalg.norm(v1), b2 / np.linalg.norm(b2))
+plt.title('Mapa Ramachandrana z kolorem dla struktur drugorzędowych')
+plt.xlabel('Kąt Phi (°)')
+plt.ylabel('Kąt Psi (°)')
+plt.xlim(-180, 180)
+plt.ylim(-180, 180)
+plt.grid(True)
 
-    x = np.dot(m1, m2)
-    y = np.dot(np.cross(v1, v2), m2)
+# Legenda dla typów struktury drugorzędowej
+legend_elements = [plt.Line2D([0], [0], marker='o', color='w', label='Helisa alfa',
+                              markerfacecolor='blue', markersize=8),
+                   plt.Line2D([0], [0], marker='o', color='w', label='Arkusze beta',
+                              markerfacecolor='red', markersize=8),
+                   plt.Line2D([0], [0], marker='o', color='w', label='Inne',
+                              markerfacecolor='green', markersize=8)]
+plt.legend(handles=legend_elements)
 
-    return np.degrees(np.arctan2(y, x))
-
-
-def extract_coordinates(structure, atom_name, residue_number, chain_id='A'):
-    #Pobiera współrzędne atomu w danej strukturze
-    for model in structure:
-        for chain in model:
-            if chain.id == chain_id:
-                for residue in chain:
-                    if residue.id[1] == residue_number:
-                        for atom in residue:
-                            if atom.name == atom_name:
-                                return atom.get_coord()
-    return None
-
-
-if __name__ == "__main__":
-    pdb_id = '1FCW'
-    pdb_file_path = pobierz_strukture_z_pdb(pdb_id)
-
-    if pdb_file_path:
-        # Wczytanie struktury z pliku PDB
-        parser = PDBParser()
-        structure = parser.get_structure(pdb_id, pdb_file_path)
-
-        # Obliczenia dla kąta alpha dla każdej reszty
-        for model in structure:
-            for chain in model:
-                for residue in chain:
-                    if residue.id[0] == ' ' and residue.id[2] == ' ':
-                        residue_number = residue.id[1]
-                        n = residue_number
-                        alpha_atoms = [
-                            extract_coordinates(structure, 'O3\'', n - 1),
-                            extract_coordinates(structure, 'P', n - 1),
-                            extract_coordinates(structure, 'O5\'', n),
-                            extract_coordinates(structure, 'C5\'', n)
-                        ]
-                        alpha_angle = calculate_dihedral_angle(*alpha_atoms)
-
-                        if alpha_angle is not None:
-                            print(f'Reszta {residue_number}: Kąt dihedryczny alpha: {alpha_angle} stopni')
-                        else:
-                            print(f'Nie można obliczyć kąta dla reszty {residue_number}')
+plt.show()
