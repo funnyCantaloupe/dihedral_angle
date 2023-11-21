@@ -28,8 +28,9 @@ torsion_angles = []
 # Iteracja po łańcuchach i resztach w strukturze
 for model in structure:
     for chain in model:
-        residues = chain.get_residues()
-        for residue in residues:
+        residues = list(chain.get_residues())
+        for i in range(len(residues)):
+            residue = residues[i]
             residue_number = residue.get_id()[1]  # Numer reszty
 
             torsion_values = [f"{residue_number}"]  # Numer reszty jako pierwsza wartość
@@ -37,11 +38,30 @@ for model in structure:
             for angle, atoms in torsion_atoms.items():
                 try:
                     atom1, atom2, atom3, atom4 = atoms
+
+                    # Jeśli obliczamy kąt alfa i poprzednia reszta istnieje, atom1 powinien pochodzić z poprzedniej reszty
+                    if angle == 'alpha' and i == 0:
+                        torsion_values.append(None)  # Dla pierwszej reszty kąt alfa jest None
+                        continue
+
+                    if angle == 'alpha' and i > 0:
+                        atom1 = residues[i-1][atom1]
+                    else:
+                        atom1 = residue[atom1]
+
                     # Pobieranie atomów dla kąta torsyjnego
-                    atom1 = residue[atom1]
                     atom2 = residue[atom2]
-                    atom3 = residue[atom3]
-                    atom4 = residue[atom4]
+                    #atom3 = residue[atom3]
+
+                    if angle == 'zeta' and i < len(residues) - 1:
+                        atom3 = residues[i + 1][atom3]
+                    else:
+                        atom3 = residue[atom3]
+
+                    if angle in ['epsilon', 'zeta'] and i < len(residues) - 1:
+                        atom4 = residues[i + 1][atom4]
+                    else:
+                        atom4 = residue[atom4]
 
                     # Obliczanie kąta torsyjnego
                     torsion_angle = calc_dihedral(atom1.get_vector(), atom2.get_vector(),
