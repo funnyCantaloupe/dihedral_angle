@@ -72,11 +72,12 @@ for model in structure:
                     torsion_values.append(None)
             torsion_angles.append(torsion_values)
 
-# Zapisanie wyników do pliku CSV jako macierz n x m
+# Zapisanie wyników do pliku CSV jako macierz n x m z wartościami zaokrąglonymi do jednego miejsca po przecinku
 with open('kąty_torsyjne.csv', 'w') as file:
     header = ",".join([angle for angle in torsion_atoms.keys()])
     file.write(f"Reszta,{header}\n")
 
     for angle_row in torsion_angles:
-        line = ",".join([str(value) for value in angle_row])
+        # Zaokrąglanie wartości do jednego miejsca po przecinku
+        line = ",".join([f"{value:.1f}" if isinstance(value, float) else str(value) for value in angle_row])
         file.write(f"{line}\n")
