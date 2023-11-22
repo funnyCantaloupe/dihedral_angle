@@ -72,6 +72,15 @@ for model in structure:
                     torsion_values.append(None)
             torsion_angles.append(torsion_values)
 
+            # Iteracja przez każdą linijkę torsion_values
+            for values in torsion_values:
+                # Sprawdzenie, czy wartość torsion_values[7] nie jest None i czy długość listy jest wystarczająca
+                if torsion_values[7] is not None:
+                    # Zmiana wartości torsion_values[8] na None
+                    torsion_values[8] = None
+
+            #print(torsion_values)
+
 # Zapisanie wyników do pliku CSV jako macierz n x m z wartościami zaokrąglonymi do jednego miejsca po przecinku
 with open('kąty_torsyjne.csv', 'w') as file:
     header = ",".join([angle for angle in torsion_atoms.keys()])
